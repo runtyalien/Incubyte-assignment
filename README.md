@@ -4,8 +4,8 @@ Web software that lets an HR manager maintain salary data for ~10,000 employees
 across multiple countries, and answer questions about how the organisation pays
 people.
 
-> **Status: in progress.** Domain model, seed data and the read API are built.
-> Recording pay changes and the UI are not.
+> **Status: in progress.** The backend is complete — model, seed, directory,
+> analytics and recording pay changes. The UI is not built yet.
 
 ## Documents
 
@@ -110,8 +110,11 @@ With the backend running, the interactive docs at <http://localhost:8000/docs>
 list everything. The two endpoints that exist so far:
 
 ```
-GET /api/employees        paged, filtered, sorted directory
-GET /api/employees/{id}   one employee with their full pay history
+GET  /api/employees                      paged, filtered, sorted directory
+GET  /api/employees/{id}                 one employee with their pay history
+POST /api/employees/{id}/compensation    record a pay change
+GET  /api/analytics/overview             totals for the whole organisation
+GET  /api/analytics/distribution?by=...  the same, grouped
 ```
 
 The directory takes `q`, `country`, `department`, `family`, `level`,
@@ -119,6 +122,18 @@ The directory takes `q`, `country`, `department`, `family`, `level`,
 `page_size` and `as_of`. Repeat a parameter to pass several values —
 `?level=L1&level=L2`. `as_of` reports pay as it stood on that date, which is
 what the effective-dated model buys.
+
+The analytics endpoints take the same filters and group by `country`,
+`department`, `family` or `level`. They report in USD by default; `local=true`
+reports what each country actually pays, and is refused where a group would
+mix currencies, because a median of rupees and dollars is not a number anyone
+should act on.
+
+Recording a pay change appends a record, never edits one. It refuses a date
+before the hire date, a currency the employee is not paid in, a date after
+they left, a date more than two years ahead, and a second record on a date
+already used unless it is marked as a correction. A change can be dated ahead
+or back-dated; the response says whether it is the pay now in force.
 
 Money comes back as a string with its currency rather than a JSON number, so
 nothing becomes a float on the way to the browser.
