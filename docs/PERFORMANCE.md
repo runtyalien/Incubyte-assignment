@@ -1,6 +1,7 @@
 # Performance
 
-Measured on the seeded dataset: 10,000 employees, 50,414 compensation records,
+Measured on the seeded dataset: 10,000 employees, around 50,500 compensation
+records,
 SQLite on a laptop. The end-to-end figures below come from
 `python scripts/benchmark_directory.py`, which is in the repository — run it
 after seeding and you should see roughly the same numbers. Each is the best of
@@ -39,7 +40,8 @@ ranking version was not kept once it lost:
 | Count of all matches    |          157 ms |         **20 ms** |
 
 Ranking loses because it does the same work regardless of what was asked for.
-`EXPLAIN QUERY PLAN` showed `MATERIALIZE` — all 50,414 records numbered and
+`EXPLAIN QUERY PLAN` showed `MATERIALIZE` — every one of the 50,000-odd
+records numbered and
 spooled to a temporary table before `LIMIT` came anywhere near being applied.
 Fifty rows cost the same as ten thousand.
 
@@ -64,7 +66,7 @@ same repository function, so the two columns are like for like.
 | First page, by name        | 275 ms | **10 ms** |
 | First page, by salary      | 290 ms | **37 ms** |
 | First page, by compa-ratio | 291 ms | **39 ms** |
-| Page 150, deep offset      | 293 ms | **107 ms** |
+| Page 150, deep offset      | 293 ms | **118 ms** |
 | Search by surname          | 336 ms | **34 ms** |
 | One employee with history  | 142 ms |  **2 ms** |
 
@@ -89,7 +91,7 @@ rejected rather than quietly clamped.
 
 ## Known limits
 
-**Deep offsets degrade.** Page 150 costs 107 ms because the rows before it
+**Deep offsets degrade.** Page 150 costs about 118 ms because the rows before it
 still have to be walked, and it gets worse the further back you go. Keyset
 pagination would fix it at the cost of jump-to-page. For a directory people
 filter and sort rather than page to the end of, offset is the better trade —
