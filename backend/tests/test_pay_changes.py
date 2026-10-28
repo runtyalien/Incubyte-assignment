@@ -92,6 +92,10 @@ def test_a_zero_amount_is_rejected(session, employee):
     with pytest.raises(InvalidPayChange, match="greater than zero"):
         give_raise(session, employee, "0")
 
+def test_a_fraction_smaller_than_a_cent_is_rejected(session, employee):
+    with pytest.raises(InvalidPayChange, match="too many decimal places"):
+        give_raise(session, employee, "10000.001")
+
 
 def test_a_currency_the_employee_is_not_paid_in_is_rejected(session, employee):
     # Changing someone's currency is a relocation, not a pay change.

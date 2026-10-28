@@ -41,6 +41,11 @@ def to_major(minor: int, currency: str) -> Decimal:
     places = exponent(currency)
     return (Decimal(minor) / Decimal(10) ** places).quantize(Decimal(1).scaleb(-places))
 
+def has_valid_precision(amount: Decimal | int | str, currency: str) -> bool:
+    """True when the amount can be stored exactly in the currency's minor unit."""
+    value = Decimal(amount)
+    rounded_minor = to_minor(value, currency)
+    return value == to_major(rounded_minor, currency)
 
 def to_base(minor: int, currency: str, rate_micros: int) -> int:
     """Convert a local amount into the base currency at a given rate.

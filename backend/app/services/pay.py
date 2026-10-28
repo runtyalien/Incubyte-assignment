@@ -13,7 +13,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.money import to_base, to_minor
+from app.domain.money import has_valid_precision, to_base, to_minor
 from app.models import CompensationRecord, Employee, PayChangeReason
 from app.repository import fx
 
@@ -93,6 +93,11 @@ def _check(
         raise InvalidPayChange(
             f"{employee.staff_number} is paid in {paid_in}, not {currency}. "
             "Moving someone to another currency means moving their location."
+        )
+    
+    if not has_valid_precision(amount, currency):
+        raise InvalidPayChange(
+            f"Amount has too many decimal places for {currency}"
         )
 
     if effective_from < employee.hired_on:
