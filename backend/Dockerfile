@@ -29,9 +29,9 @@ RUN useradd --system --uid 1000 --create-home api \
 USER api
 
 EXPOSE 8000
-# The container always listens on 8000. Render runs its own HTTP check against
-# healthCheckPath rather than this one, so there is no PORT to read here.
+# Reads PORT because the platform chooses it -- Render hands the container
+# its own, and a check pinned to 8000 would fail against a healthy server.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=5 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/api/health')"
 
 CMD ["./start.sh"]
