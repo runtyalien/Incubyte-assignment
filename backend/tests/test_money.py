@@ -1,0 +1,52 @@
+from decimal import Decimal
+
+import pytest
+
+from app.domain.money import (
+    UnknownCurrency,
+    exponent,
+    rate_to_micros,
+    to_base,
+    to_major,
+    to_minor,
+)
+
+
+def test_major_to_minor_for_a_two_decimal_currency():
+    assert to_minor("1234.56", "USD") == 123_456
+
+
+def test_yen_has_no_minor_unit():
+    # The trap this guards: assuming two decimals everywhere is off by 100x.
+    assert exponent("JPY") == 0
+    assert to_minor("1234", "JPY") == 1234
+
+
+def test_round_trip_preserves_the_amount():
+    assert to_major(to_minor("98765.43", "GBP"), "GBP") == Decimal("98765.43")
+
+
+def test_fractional_minor_units_round_half_up():
+    assert to_minor("0.005", "USD") == 1
+    assert to_minor("0.004", "USD") == 0
+
+
+def test_base_currency_converts_to_itself_untouched():
+    assert to_base(10_000_000, "USD", rate_to_micros("1.0")) == 10_000_000
+
+
+def test_conversion_applies_the_rate():
+    # 80,000 GBP at 1.27 is 101,600 USD.
+    assert to_base(to_minor("80000", "GBP"), "GBP", rate_to_micros("1.27")) == 10_160_000
+
+
+def test_conversion_between_different_exponents():
+    # 5,000,000 JPY (no minor unit) at 0.0067 is 33,500 USD (two decimals).
+    converted = to_base(to_minor("5000000", "JPY"), "JPY", rate_to_micros("0.0067"))
+
+    assert converted == to_minor("33500", "USD")
+
+
+def test_unknown_currency_is_rejected_rather_than_guessed():
+    with pytest.raises(UnknownCurrency):
+        to_minor("100", "XYZ")
