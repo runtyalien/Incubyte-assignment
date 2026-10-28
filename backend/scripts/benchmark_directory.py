@@ -1,4 +1,4 @@
-"""Time the directory queries against whatever is in the database.
+"""Time the directory and analytics queries against whatever is in the database.
 
     python scripts/benchmark_directory.py
 
@@ -19,7 +19,8 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from app.db import engine  # noqa: E402
 from app.models import Employee  # noqa: E402
-from app.repository import directory  # noqa: E402
+from app.repository import analytics, directory  # noqa: E402
+from app.repository.analytics import Dimension  # noqa: E402
 from app.repository.directory import Filters, Position, Sort  # noqa: E402
 
 ROUNDS = 5
@@ -66,8 +67,31 @@ def main() -> None:
             "one employee": lambda: directory.get(session, 1, as_of=today),
         }
 
+        print("directory")
         for label, case in cases.items():
-            print(f"  {label:<30} {best(case) * 1000:7.1f} ms")
+            print(f"  {label:<34} {best(case) * 1000:7.1f} ms")
+
+        aggregates = {
+            "overview": lambda: analytics.overview(session, as_of=today),
+            "distribution by country": lambda: analytics.distribution(
+                session, Dimension.COUNTRY, as_of=today
+            ),
+            "distribution by level": lambda: analytics.distribution(
+                session, Dimension.LEVEL, as_of=today
+            ),
+            "by level, one country, local": lambda: analytics.distribution(
+                session,
+                Dimension.LEVEL,
+                filters=Filters(countries=("IN",)),
+                as_of=today,
+                local=True,
+            ),
+        }
+
+        print()
+        print("analytics")
+        for label, case in aggregates.items():
+            print(f"  {label:<34} {best(case) * 1000:7.1f} ms")
 
 
 if __name__ == "__main__":

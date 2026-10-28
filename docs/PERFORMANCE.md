@@ -74,6 +74,34 @@ Filtering to people paid below their band lands around 50 ms. It has no
 comparable before figure — that case was measured with an extra country filter
 on the first pass, so quoting it as a speedup would be dishonest.
 
+## Analytics
+
+| Query                              |  Time |
+| ---------------------------------- | ----: |
+| Overview of the whole organisation | 215 ms |
+| Distribution by country            | 156 ms |
+| Distribution by level              | 159 ms |
+| By level, one country, local pay   |  40 ms |
+
+These are slower than the directory and that is inherent rather than sloppy.
+The directory resolves current pay only for the rows a page returns; an
+aggregate has to resolve it for everyone in scope — about 9,200 people — and
+then rank them twice, once by pay and once by compa-ratio, before grouping.
+
+The overview carries an extra query on top: the count of people with no pay in
+effect or no band for their role. Folding it into the main statement would need
+outer joins where the aggregate needs inner ones, which would make one query do
+two jobs badly.
+
+Filtering is what brings this down. Narrowed to one country the same query runs
+in 40 ms, because the expensive part scales with how many people are in scope
+rather than how many exist. A dashboard that loads three charts unfiltered
+spends about half a second; the same dashboard filtered spends a tenth of that.
+
+That is acceptable for a page someone opens and reads. If it stopped being
+acceptable the fix is not a cleverer query — it is caching the aggregates,
+since they only change when someone records a pay change.
+
 ## Other decisions
 
 **The count query drops the pay and band joins** unless a band filter is
