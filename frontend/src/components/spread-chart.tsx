@@ -18,7 +18,7 @@ export function SpreadChart({
   compact?: boolean;
 }) {
   if (groups.length === 0) {
-    return <p className="px-4 py-8 text-sm text-muted">Nothing to show.</p>;
+    return <p className="px-4 py-8 text-sm text-muted-foreground">Nothing to show.</p>;
   }
 
   // One scale across every group, or the bars are not comparable.
@@ -33,7 +33,7 @@ export function SpreadChart({
   const currency = groups[0].pay.median.currency;
 
   return (
-    <div className="divide-y divide-line">
+    <div className="divide-y divide-border">
       {groups.map((group) => {
         const p25 = Number(group.pay.p25.amount);
         const p75 = Number(group.pay.p75.amount);
@@ -57,16 +57,16 @@ export function SpreadChart({
               className="relative h-6"
               title={`${money(group.pay.p25)} – ${money(group.pay.p75)}, median ${money(group.pay.median)}`}
             >
-              <div className="absolute top-2.5 h-1 w-full rounded bg-line" />
+              <div className="absolute top-2.5 h-1 w-full rounded bg-border" />
               <div
-                className="absolute top-1.5 h-3 rounded bg-accent-soft"
+                className="absolute top-1.5 h-3 rounded bg-brand-soft"
                 style={{
                   left: `${at(p25)}%`,
                   width: `${Math.max(at(p75) - at(p25), 0.8)}%`,
                 }}
               />
               <div
-                className="absolute top-0.5 h-5 w-0.5 rounded bg-accent"
+                className="absolute top-0.5 h-5 w-0.5 rounded bg-brand"
                 style={{ left: `${at(median)}%` }}
               />
             </div>
@@ -112,7 +112,7 @@ export function BandSplit({
 
   return (
     <div className="px-4 py-4">
-      <div className="flex h-2.5 overflow-hidden rounded-full bg-line">
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-border">
         {parts.map((part) => (
           <div
             key={part.label}
@@ -125,7 +125,7 @@ export function BandSplit({
       <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
         {parts.map((part) => (
           <div key={part.label}>
-            <dt className="text-xs text-muted">{part.label}</dt>
+            <dt className="text-xs text-muted-foreground">{part.label}</dt>
             <dd className={`tnum font-medium ${part.text}`}>
               {count(part.value)}
               <span className="ml-1 text-xs font-normal text-faint">

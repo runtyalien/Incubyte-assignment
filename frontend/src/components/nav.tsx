@@ -11,10 +11,10 @@ const LINKS = [
 /** The bar itself, with no runtime-only data in it, so it can prerender. */
 export function NavBar({ active }: { active: string | null }) {
   return (
-    <header className="border-b border-line bg-surface">
+    <header className="border-b border-border bg-card">
       <div className="mx-auto flex max-w-7xl items-center gap-8 px-6 py-3">
         <Link href="/" className="text-sm font-semibold tracking-tight">
-          ACME <span className="text-muted font-normal">Salary</span>
+          ACME <span className="text-muted-foreground font-normal">Salary</span>
         </Link>
 
         <nav className="flex gap-1 text-sm">
@@ -33,8 +33,8 @@ export function NavBar({ active }: { active: string | null }) {
                 aria-current={current ? "page" : undefined}
                 className={`rounded px-3 py-1.5 transition-colors ${
                   current
-                    ? "bg-accent-soft text-accent font-medium"
-                    : "text-muted hover:text-foreground"
+                    ? "bg-brand-soft text-brand font-medium"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {link.label}

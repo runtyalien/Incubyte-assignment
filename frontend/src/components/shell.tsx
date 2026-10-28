@@ -1,6 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { count, position } from "@/lib/format";
 import type { BandPosition } from "@/lib/types";
 
@@ -21,7 +29,7 @@ export function Page({
         <div>
           <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
           {description && (
-            <p className="mt-1 text-sm text-muted">{description}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           )}
         </div>
         {actions}
@@ -31,7 +39,9 @@ export function Page({
   );
 }
 
-export function Card({
+/** A titled card. Named Panel so it does not shadow the library's Card, which
+ *  it is built from. */
+export function Panel({
   title,
   hint,
   children,
@@ -43,17 +53,15 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section
-      className={`rounded-lg border border-line bg-surface ${className}`}
-    >
+    <Card className={`gap-0 overflow-hidden py-0 ${className}`}>
       {title && (
-        <div className="flex items-baseline justify-between gap-4 border-b border-line px-4 py-3">
-          <h2 className="text-sm font-medium">{title}</h2>
+        <CardHeader className="flex items-baseline justify-between gap-4 border-b px-4 py-3">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
           {hint && <span className="text-xs text-faint">{hint}</span>}
-        </div>
+        </CardHeader>
       )}
-      {children}
-    </section>
+      <CardContent className="px-0">{children}</CardContent>
+    </Card>
   );
 }
 
@@ -67,31 +75,29 @@ export function Stat({
   hint?: string;
 }) {
   return (
-    <div className="rounded-lg border border-line bg-surface px-4 py-3">
-      <div className="text-xs text-muted">{label}</div>
+    <Card className="gap-0 px-4 py-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
       <div className="tnum mt-1 text-xl font-semibold tracking-tight">
         {value}
       </div>
       {hint && <div className="mt-0.5 text-xs text-faint">{hint}</div>}
-    </div>
+    </Card>
   );
 }
 
 const POSITION_STYLES: Record<BandPosition, string> = {
-  below: "bg-below-soft text-below",
-  within: "bg-within-soft text-within",
-  above: "bg-above-soft text-above",
+  below: "bg-below-soft text-below border-transparent",
+  within: "bg-within-soft text-within border-transparent",
+  above: "bg-above-soft text-above border-transparent",
 };
 
 export function BandTag({ value }: { value: BandPosition | null }) {
   if (!value) return <span className="text-xs text-faint">No band</span>;
 
   return (
-    <span
-      className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium whitespace-nowrap ${POSITION_STYLES[value]}`}
-    >
+    <Badge variant="outline" className={POSITION_STYLES[value]}>
       {position(value)}
-    </span>
+    </Badge>
   );
 }
 
@@ -99,7 +105,7 @@ export function Empty({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="px-4 py-16 text-center">
       <p className="text-sm font-medium">{title}</p>
-      {hint && <p className="mt-1 text-sm text-muted">{hint}</p>}
+      {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -108,7 +114,7 @@ export function Problem({ message }: { message: string }) {
   return (
     <div
       role="alert"
-      className="rounded-lg border border-below/40 bg-below-soft px-4 py-3 text-sm text-below"
+      className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
     >
       {message}
     </div>
@@ -131,14 +137,14 @@ export function Pager({
   const upto = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-t border-line px-4 py-3 text-sm">
-      <span className="tnum text-muted">
+    <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm">
+      <span className="tnum text-muted-foreground">
         {count(first)}–{count(upto)} of {count(total)}
       </span>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <Step to={href(page - 1)} disabled={page <= 1} label="Previous" />
-        <span className="tnum px-2 text-muted">
+        <span className="tnum px-1 text-muted-foreground">
           {count(page)} / {count(last)}
         </span>
         <Step to={href(page + 1)} disabled={page >= last} label="Next" />
@@ -156,18 +162,18 @@ function Step({
   disabled: boolean;
   label: string;
 }) {
-  const style = "rounded border border-line px-2.5 py-1";
-
   if (disabled) {
     return (
-      <span aria-disabled className={`${style} text-faint`}>
+      <Button variant="outline" size="sm" disabled aria-disabled>
         {label}
-      </span>
+      </Button>
     );
   }
 
+  // This Button has no asChild, so the link borrows its styling instead of
+  // being wrapped in one.
   return (
-    <Link href={to} className={`${style} hover:bg-accent-soft`}>
+    <Link href={to} className={buttonVariants({ variant: "outline", size: "sm" })}>
       {label}
     </Link>
   );

@@ -22,17 +22,17 @@ export function BandMeter({ band, pay }: { band: Band; pay: Money | null }) {
     <div className="px-4 py-5">
       <div className="relative h-11">
         {/* The full scale. */}
-        <div className="absolute top-4 h-2.5 w-full rounded-full bg-line" />
+        <div className="absolute top-4 h-2.5 w-full rounded-full bg-border" />
 
         {/* The band itself. */}
         <div
-          className="absolute top-4 h-2.5 rounded-full bg-accent-soft"
+          className="absolute top-4 h-2.5 rounded-full bg-brand-soft"
           style={{ left: `${at(low)}%`, width: `${at(high) - at(low)}%` }}
         />
 
         {/* Midpoint: what the role is meant to pay. */}
         <div
-          className="absolute top-3 h-4.5 w-px bg-accent"
+          className="absolute top-3 h-4.5 w-px bg-brand"
           style={{ left: `${at(mid)}%` }}
           aria-hidden
         />
@@ -52,7 +52,7 @@ export function BandMeter({ band, pay }: { band: Band; pay: Money | null }) {
 
       <div className="tnum mt-1 flex justify-between text-xs text-faint">
         <span>{money(band.low)}</span>
-        <span className="text-muted">mid {money(band.mid)}</span>
+        <span className="text-muted-foreground">mid {money(band.mid)}</span>
         <span>{money(band.high)}</span>
       </div>
     </div>

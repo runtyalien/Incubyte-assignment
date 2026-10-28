@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { Filters } from "@/components/filters";
 import { BandSplit, SpreadChart } from "@/components/spread-chart";
-import { Card, Page as Shell, Problem, Stat } from "@/components/ui";
+import { Page as Shell, Panel, Problem, Stat } from "@/components/shell";
 import { ApiError, getDistribution, getOverview, getReference } from "@/lib/api";
 import { count, day, money } from "@/lib/format";
 import { toQuery, withParams, type Params } from "@/lib/search-params";
@@ -78,36 +78,40 @@ async function Dashboard({ search }: { search: Promise<Params> }) {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Card
+        <Panel
           title="Against band"
           hint={`${count(outside)} outside`}
           className="lg:col-span-1"
         >
           <BandSplit {...overview.band} />
-          <div className="border-t border-line px-4 py-2.5 text-sm">
+          <div className="border-t border-border px-4 py-2.5 text-sm">
             <Link
-              href="/employees?position=below&sort=compa&order=asc"
-              className="text-accent underline-offset-2 hover:underline"
+              href={`/employees${withParams(params, {
+                position: "below",
+                sort: "compa",
+                order: "asc",
+              })}`}
+              className="text-brand underline-offset-2 hover:underline"
             >
               See who is paid below their band →
             </Link>
           </div>
-        </Card>
+        </Panel>
 
-        <Card
+        <Panel
           title="Pay by country"
           hint="USD, so countries compare"
           className="lg:col-span-2"
         >
           <SpreadChart groups={byCountry.groups} />
-        </Card>
+        </Panel>
 
-        <Card title="Pay by level" className="lg:col-span-2">
+        <Panel title="Pay by level" className="lg:col-span-2">
           <SpreadChart groups={byLevel.groups} />
-        </Card>
+        </Panel>
 
-        <Card title="Compa-ratio by department">
-          <ul className="divide-y divide-line text-sm">
+        <Panel title="Compa-ratio by department">
+          <ul className="divide-y divide-border text-sm">
             {byDepartment.groups.map((group) => (
               <li
                 key={group.key}
@@ -123,7 +127,7 @@ async function Dashboard({ search }: { search: Promise<Params> }) {
               </li>
             ))}
           </ul>
-        </Card>
+        </Panel>
       </div>
 
       <p className="mt-4 text-xs text-faint">
@@ -144,7 +148,7 @@ async function Dashboard({ search }: { search: Promise<Params> }) {
 
 function Loading() {
   return (
-    <div className="rounded-lg border border-line bg-surface px-4 py-16 text-center text-sm text-muted">
+    <div className="rounded-lg border border-border bg-card px-4 py-16 text-center text-sm text-muted-foreground">
       Working out the figures…
     </div>
   );

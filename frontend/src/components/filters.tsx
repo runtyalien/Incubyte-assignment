@@ -3,7 +3,20 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Reference } from "@/lib/types";
+
+/** Radix refuses an empty string as a Select value, so "everything" needs a
+ *  name of its own. It never reaches the URL. */
+const ANY = "any";
 
 const STATUSES = [
   { value: "active", label: "Current staff" },
@@ -12,7 +25,6 @@ const STATUSES = [
 ];
 
 const POSITIONS = [
-  { value: "", label: "Any band position" },
   { value: "below", label: "Below band" },
   { value: "within", label: "In band" },
   { value: "above", label: "Above band" },
@@ -59,9 +71,10 @@ export function Filters({
         />
       )}
 
-      <Select
+      <Pick
         label="Country"
-        value={params.get("country") ?? ""}
+        all="All countries"
+        value={params.get("country")}
         options={reference.countries.map((c) => ({
           value: c.code,
           label: c.name,
@@ -69,100 +82,146 @@ export function Filters({
         onChange={(value) => set({ country: value })}
       />
 
-      <Select
+      <Pick
         label="Department"
-        value={params.get("department") ?? ""}
+        all="All departments"
+        value={params.get("department")}
         options={reference.departments.map((d) => ({ value: d, label: d }))}
         onChange={(value) => set({ department: value })}
       />
 
-      <Select
+      <Pick
+        label="Job family"
+        all="All job families"
+        value={params.get("family")}
+        options={reference.families.map((f) => ({
+          value: f,
+          label: f,
+        }))}
+        onChange={(value) => set({ family: value })}
+      />
+
+      <Pick
         label="Level"
-        value={params.get("level") ?? ""}
+        all="All levels"
+        value={params.get("level")}
         options={reference.levels.map((l) => ({
           value: l.code,
           label: l.code,
         }))}
         onChange={(value) => set({ level: value })}
+        width="w-28"
       />
 
+      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span>As of</span>
+        <Input
+          aria-label="As of date"
+          type="date"
+          value={params.get("as_of") ?? ""}
+          onChange={(event) => set({ as_of: event.target.value || undefined })}
+          className="w-40"
+        />
+      </label>
+
       {showPosition && (
-        <Select
-          label={POSITIONS[0].label}
-          value={params.get("position") ?? ""}
-          options={POSITIONS.slice(1)}
+        <Pick
+          label="Band position"
+          all="Any band position"
+          value={params.get("position")}
+          options={POSITIONS}
           onChange={(value) => set({ position: value })}
         />
       )}
 
       {showStatus && (
-        <select
-          aria-label="Employment status"
+        <Select
+          items={STATUSES}
           value={params.get("status") ?? "active"}
-          onChange={(event) =>
-            set({
-              status:
-                event.target.value === "active"
-                  ? undefined
-                  : event.target.value,
-            })
+          onValueChange={(value) =>
+            set({ status: !value || value === "active" ? undefined : value })
           }
-          className="rounded border border-line bg-surface px-2 py-1.5 text-sm"
         >
-          {STATUSES.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-36" aria-label="Employment status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUSES.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
 
       {active > 0 && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => startTransition(() => router.push(path))}
-          className="rounded px-2 py-1.5 text-sm text-muted underline-offset-2 hover:underline"
         >
           Clear {active} filter{active === 1 ? "" : "s"}
-        </button>
+        </Button>
       )}
 
-      {pending && <span className="text-xs text-faint">Updating…</span>}
+      {pending && (
+        <span className="text-xs text-faint" aria-live="polite">
+          Updating…
+        </span>
+      )}
     </div>
   );
 }
 
 function countActive(params: URLSearchParams): number {
-  return ["q", "country", "department", "family", "level", "position", "status"]
-    .filter((key) => params.get(key))
-    .length;
+  return [
+    "q",
+    "country",
+    "department",
+    "family",
+    "level",
+    "as_of",
+    "position",
+    "status",
+  ].filter((key) => params.get(key)).length;
 }
 
-function Select({
+function Pick({
   label,
+  all,
   value,
   options,
   onChange,
+  width = "w-40",
 }: {
   label: string;
-  value: string;
+  all: string;
+  value: string | null;
   options: { value: string; label: string }[];
   onChange: (value: string | undefined) => void;
+  width?: string;
 }) {
+  const items = [{ value: ANY, label: all }, ...options];
+
   return (
-    <select
-      aria-label={label}
-      value={value}
-      onChange={(event) => onChange(event.target.value || undefined)}
-      className="rounded border border-line bg-surface px-2 py-1.5 text-sm"
+    <Select
+      items={items}
+      value={value ?? ANY}
+      onValueChange={(next) => onChange(!next || next === ANY ? undefined : next)}
     >
-      <option value="">{label}</option>
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger className={width} aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ANY}>{all}</SelectItem>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -195,13 +254,13 @@ function Search({
   }, [text]);
 
   return (
-    <input
+    <Input
       type="search"
       value={text}
       onChange={(event) => setText(event.target.value)}
       placeholder="Name, staff number or email"
       aria-label="Search employees"
-      className="w-64 rounded border border-line bg-surface px-2.5 py-1.5 text-sm placeholder:text-faint"
+      className="w-56"
     />
   );
 }
