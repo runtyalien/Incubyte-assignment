@@ -1,11 +1,14 @@
 from contextlib import contextmanager
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 import app.db  # noqa: F401  — importing registers the SQLite foreign-key pragma
+from app.db import get_session
+from app.main import create_app
 from app.models import Base
 from tests.factories import Org
 
@@ -31,6 +34,15 @@ def session(engine):
 @pytest.fixture
 def org(session):
     return Org(session)
+
+
+@pytest.fixture
+def client(session):
+    """The API against the test database rather than whatever DATABASE_URL says."""
+    api = create_app()
+    api.dependency_overrides[get_session] = lambda: session
+    with TestClient(api) as test_client:
+        yield test_client
 
 
 @pytest.fixture
