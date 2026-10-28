@@ -4,8 +4,8 @@ Web software that lets an HR manager maintain salary data for ~10,000 employees
 across multiple countries, and answer questions about how the organisation pays
 people.
 
-> **Status: scaffold.** Design is documented; the domain model, seed data and HR
-> features are not built yet.
+> **Status: in progress.** Domain model, seed data and the read API are built.
+> Recording pay changes and the UI are not.
 
 ## Documents
 
@@ -13,6 +13,8 @@ people.
   left out
 - [Architecture](docs/ARCHITECTURE.md) — layering, data model, performance and
   testing approach
+- [Performance](docs/PERFORMANCE.md) — measured directory timings and why the
+  current-pay lookup is shaped the way it is
 - Decision records:
   - [Effective-dated compensation](docs/adr/0001-effective-dated-compensation.md)
   - [Money as integer minor units](docs/adr/0002-money-as-integer-minor-units.md)
@@ -101,6 +103,25 @@ than doubling it.
 What the generated organisation looks like — headcount per country, the level
 pyramid, how markets are priced relative to the US, where salaries sit in band
 — is all in [`app/seed/shape.py`](backend/app/seed/shape.py).
+
+## API
+
+With the backend running, the interactive docs at <http://localhost:8000/docs>
+list everything. The two endpoints that exist so far:
+
+```
+GET /api/employees        paged, filtered, sorted directory
+GET /api/employees/{id}   one employee with their full pay history
+```
+
+The directory takes `q`, `country`, `department`, `family`, `level`,
+`position` (below/within/above band), `status`, `sort`, `order`, `page`,
+`page_size` and `as_of`. Repeat a parameter to pass several values —
+`?level=L1&level=L2`. `as_of` reports pay as it stood on that date, which is
+what the effective-dated model buys.
+
+Money comes back as a string with its currency rather than a JSON number, so
+nothing becomes a float on the way to the browser.
 
 ## Tests
 
