@@ -1,5 +1,3 @@
-"""Smoke test proving the app boots and the router is mounted."""
-
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -7,15 +5,16 @@ from app.main import create_app
 client = TestClient(create_app())
 
 
-def test_health_returns_ok() -> None:
-    response = client.get("/api/health")
+def test_health_reports_ok():
+    res = client.get("/api/health")
 
-    assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert res.status_code == 200
+    assert res.json()["status"] == "ok"
 
 
-def test_openapi_schema_is_served() -> None:
-    response = client.get("/openapi.json")
+def test_health_route_is_published():
+    # A router that fails to mount otherwise only shows up as a 404 somewhere else.
+    res = client.get("/openapi.json")
 
-    assert response.status_code == 200
-    assert "/api/health" in response.json()["paths"]
+    assert res.status_code == 200
+    assert "/api/health" in res.json()["paths"]

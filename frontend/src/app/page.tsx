@@ -2,12 +2,6 @@ import { Suspense } from "react";
 
 import { getHealth, type Health } from "@/lib/api";
 
-/**
- * Placeholder landing page.
- *
- * It exists to prove the frontend can reach the backend; the real HR surfaces
- * replace it as they are built.
- */
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-8 px-6 py-16">
@@ -34,48 +28,41 @@ export default function Home() {
   );
 }
 
-type HealthResult =
-  | { ok: true; health: Health }
-  | { ok: false; message: string };
+type Checked = { ok: true; health: Health } | { ok: false; reason: string };
 
-/**
- * A failed health check is an expected state here rather than a crash, so it is
- * returned as a value instead of thrown to an error boundary.
- */
-async function readHealth(): Promise<HealthResult> {
+// An unreachable API is an expected state on this page, so it comes back as a
+// value instead of going to an error boundary.
+async function checkBackend(): Promise<Checked> {
   try {
     return { ok: true, health: await getHealth() };
-  } catch (cause) {
-    return {
-      ok: false,
-      message: cause instanceof Error ? cause.message : "Unknown error",
-    };
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : "Unknown error" };
   }
 }
 
-/**
- * Reads the API health endpoint on every request, so it is deliberately kept
- * out of the prerendered shell.
- */
+// Runs on every request, which is why it sits behind Suspense rather than in
+// the prerendered shell.
 async function BackendStatus() {
-  const result = await readHealth();
+  const checked = await checkBackend();
 
-  if (!result.ok) {
+  if (!checked.ok) {
     return (
       <p className="font-mono text-red-600 dark:text-red-400">
-        {result.message}
+        {checked.reason}
       </p>
     );
   }
 
+  const { status, service, environment } = checked.health;
+
   return (
     <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
       <dt className="opacity-60">Status</dt>
-      <dd className="font-mono">{result.health.status}</dd>
+      <dd className="font-mono">{status}</dd>
       <dt className="opacity-60">Service</dt>
-      <dd className="font-mono">{result.health.service}</dd>
+      <dd className="font-mono">{service}</dd>
       <dt className="opacity-60">Environment</dt>
-      <dd className="font-mono">{result.health.environment}</dd>
+      <dd className="font-mono">{environment}</dd>
     </dl>
   );
 }
