@@ -67,3 +67,52 @@ class Page(BaseModel, Generic[T]):
     @property
     def pages(self) -> int:
         return -(-self.total // self.page_size) if self.page_size else 0
+
+
+class Spread(BaseModel):
+    lowest: Money
+    p25: Money
+    median: Money
+    p75: Money
+    highest: Money
+
+
+class BandCounts(BaseModel):
+    below: int
+    within: int
+    above: int
+
+
+class GroupStats(BaseModel):
+    key: str
+    label: str
+    headcount: int
+    pay: Spread
+    compa_median: Decimal
+    band: BandCounts
+
+
+class Distribution(BaseModel):
+    dimension: str
+    as_of: date
+
+    # "base" means every group is in one currency and can be compared across
+    # countries. "local" means each group is in its own, and comparing them
+    # would be meaningless.
+    basis: str
+
+    groups: list[GroupStats]
+
+
+class Overview(BaseModel):
+    headcount: int
+    payroll: Money
+    pay: Spread
+    compa_median: Decimal
+    band: BandCounts
+    as_of: date
+
+    # People in scope with no pay in effect or no band for their role. They are
+    # in none of the figures above, so the number is shown rather than leaving
+    # someone to notice the totals not adding up.
+    unmeasured: int
