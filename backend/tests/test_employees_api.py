@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -162,3 +162,115 @@ def test_as_of_reports_pay_as_it_was(client, directory):
     ).json()
 
     assert body["pay"]["amount"] == history[1]["amount"]["amount"]
+
+
+# -- recording a pay change -------------------------------------------------
+
+LATER = "2026-02-01"
+
+
+def someone(client):
+    person = get(client, page_size=1)["items"][0]
+    return client.get(f"/api/employees/{person['id']}").json()
+
+
+def post_change(client, employee_id, **body):
+    body.setdefault("effective_from", LATER)
+    body.setdefault("amount", "123456.78")
+    body.setdefault("reason", "merit")
+    return client.post(f"/api/employees/{employee_id}/compensation", json=body)
+
+
+def test_recording_a_raise_returns_201_and_the_new_entry(client, directory):
+    person = someone(client)
+
+    response = post_change(client, person["id"], amount="123456.78")
+    body = response.json()
+
+    assert response.status_code == 201, response.text
+    assert body["entry"]["amount"]["amount"] == "123456.78"
+    assert body["entry"]["reason"] == "merit"
+    assert body["in_effect"] is True
+    assert body["band_position"] in {"below", "within", "above"}
+
+
+def test_the_change_shows_up_in_the_history(client, directory):
+    person = someone(client)
+    before = len(person["history"])
+
+    post_change(client, person["id"])
+    after = client.get(f"/api/employees/{person['id']}").json()
+
+    assert len(after["history"]) == before + 1
+    assert after["history"][-1]["effective_from"] == LATER
+
+
+def test_a_change_dated_ahead_is_recorded_but_not_in_effect(client, directory):
+    person = someone(client)
+
+    body = post_change(client, person["id"], effective_from="2027-06-01").json()
+
+    assert body["in_effect"] is False
+
+
+def test_a_change_filed_behind_a_later_record_is_not_in_effect(client, directory):
+    # Back-dating is legitimate and the record is kept, but an existing later
+    # record still wins, so current pay does not move. Reporting this as "in
+    # effect" because its date has passed would be a lie.
+    person = someone(client)
+    latest = person["history"][-1]["effective_from"]
+    before_that = date.fromisoformat(latest) - timedelta(days=30)
+
+    body = post_change(client, person["id"], effective_from=before_that.isoformat()).json()
+    after = client.get(f"/api/employees/{person['id']}").json()
+
+    assert body["in_effect"] is False
+    assert after["pay_effective_from"] == latest
+
+
+def test_recording_against_an_unknown_employee_is_a_404(client, directory):
+    assert post_change(client, 999999).status_code == 404
+
+
+def test_a_second_record_on_a_date_already_used_is_a_409(client, directory):
+    person = someone(client)
+    taken = person["history"][-1]["effective_from"]
+
+    response = post_change(client, person["id"], effective_from=taken)
+
+    assert response.status_code == 409
+    assert "already takes effect" in response.json()["detail"]
+
+
+def test_the_same_date_is_accepted_as_a_correction(client, directory):
+    person = someone(client)
+    taken = person["history"][-1]["effective_from"]
+
+    response = post_change(client, person["id"], effective_from=taken, reason="correction")
+
+    assert response.status_code == 201
+
+
+def test_the_wrong_currency_is_a_422(client, directory):
+    person = someone(client)
+    wrong = "EUR" if person["pay"]["currency"] != "EUR" else "GBP"
+
+    response = post_change(client, person["id"], currency=wrong)
+
+    assert response.status_code == 422
+    assert "paid in" in response.json()["detail"]
+
+
+def test_a_negative_amount_is_rejected(client, directory):
+    person = someone(client)
+
+    assert post_change(client, person["id"], amount="-100").status_code == 422
+
+
+def test_a_date_before_the_hire_date_is_a_422(client, directory):
+    person = someone(client)
+
+    response = post_change(client, person["id"], effective_from="2001-01-01")
+
+    assert response.status_code == 422
+    assert "before" in response.json()["detail"]

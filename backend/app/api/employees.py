@@ -6,13 +6,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.filters import FilterDep
-from app.api.schemas import Band, EmployeeDetail, EmployeeSummary, Money, Page, PayEntry
+from app.api.schemas import (
+    Band,
+    EmployeeDetail,
+    EmployeeSummary,
+    Money,
+    Page,
+    PayChange,
+    PayChangeResult,
+    PayEntry,
+)
 from app.db import get_session
 from app.domain.money import BASE_CURRENCY, to_major
 from app.models import CompensationRecord
 from app.repository import compensation as comp
-from app.repository import directory
+from app.repository import directory, fx
 from app.repository.directory import MAX_PAGE_SIZE, Position, Row, Sort
+from app.services import pay
 
 router = APIRouter(tags=["employees"])
 
@@ -63,6 +73,55 @@ def get_employee(
         **_summary(row).model_dump(),
         band=_band(row),
         history=[_entry(record) for record in comp.history(session, employee_id)],
+    )
+
+
+@router.post(
+    "/employees/{employee_id}/compensation",
+    response_model=PayChangeResult,
+    status_code=201,
+)
+def record_pay_change(
+    employee_id: int,
+    change: PayChange,
+    session: SessionDep,
+) -> PayChangeResult:
+    """Append a pay change. Nothing already on record is touched."""
+    try:
+        record = pay.record_change(
+            session,
+            employee_id,
+            effective_from=change.effective_from,
+            amount=change.amount,
+            currency=change.currency,
+            reason=change.reason,
+            note=change.note,
+        )
+    except pay.EmployeeNotFound as err:
+        raise HTTPException(status_code=404, detail=str(err)) from None
+    except pay.ConflictingPayChange as err:
+        raise HTTPException(status_code=409, detail=str(err)) from None
+    except (pay.InvalidPayChange, fx.NoRateAvailable) as err:
+        raise HTTPException(status_code=422, detail=str(err)) from None
+
+    row = directory.get(session, employee_id)
+    band_mid = row.band_mid_minor if row else None
+    band_low = row.band_min_minor if row else None
+    band_high = row.band_max_minor if row else None
+
+    # Whether this record is the pay now in force, which is not the same as
+    # its date having arrived: back-dating a change behind an existing later
+    # record files it correctly and leaves current pay alone.
+    in_force = comp.current(session, employee_id)
+
+    return PayChangeResult(
+        employee_id=employee_id,
+        entry=_entry(record),
+        # Against the new amount rather than today's pay, so a change dated
+        # ahead still answers "does this put them outside their band".
+        compa_ratio=_ratio_for(record.amount_minor, band_mid),
+        band_position=_position_for(record.amount_minor, band_low, band_high),
+        in_effect=in_force is not None and in_force.id == record.id,
     )
 
 
@@ -117,19 +176,27 @@ def _money(minor: int | None, currency: str | None) -> Money | None:
     return Money(amount=to_major(minor, currency), currency=currency)
 
 
-def _compa_ratio(row: Row) -> Decimal | None:
+def _ratio_for(amount_minor: int | None, mid_minor: int | None) -> Decimal | None:
     """Worked out here in Decimal rather than read back from SQL, where the
     ordering expression is deliberately integer arithmetic."""
-    if row.amount_minor is None or not row.band_mid_minor:
+    if amount_minor is None or not mid_minor:
         return None
-    return (Decimal(row.amount_minor) / Decimal(row.band_mid_minor)).quantize(THREE_PLACES)
+    return (Decimal(amount_minor) / Decimal(mid_minor)).quantize(THREE_PLACES)
+
+
+def _position_for(amount_minor: int | None, low: int | None, high: int | None) -> Position | None:
+    if amount_minor is None or low is None or high is None:
+        return None
+    if amount_minor < low:
+        return Position.BELOW
+    if amount_minor > high:
+        return Position.ABOVE
+    return Position.WITHIN
+
+
+def _compa_ratio(row: Row) -> Decimal | None:
+    return _ratio_for(row.amount_minor, row.band_mid_minor)
 
 
 def _position(row: Row) -> Position | None:
-    if row.amount_minor is None or row.band_min_minor is None:
-        return None
-    if row.amount_minor < row.band_min_minor:
-        return Position.BELOW
-    if row.amount_minor > row.band_max_minor:
-        return Position.ABOVE
-    return Position.WITHIN
+    return _position_for(row.amount_minor, row.band_min_minor, row.band_max_minor)

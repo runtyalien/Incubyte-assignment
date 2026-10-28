@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models import PayChangeReason
 from app.repository.directory import Position
@@ -116,3 +116,27 @@ class Overview(BaseModel):
     # in none of the figures above, so the number is shown rather than leaving
     # someone to notice the totals not adding up.
     unmeasured: int
+
+
+class PayChange(BaseModel):
+    effective_from: date
+    amount: Decimal = Field(gt=0)
+    reason: PayChangeReason
+
+    # Defaults to whatever the employee's location is paid in. Supplying a
+    # different one is an error rather than a conversion.
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+
+    note: str | None = Field(default=None, max_length=500)
+
+
+class PayChangeResult(BaseModel):
+    employee_id: int
+    entry: PayEntry
+    compa_ratio: Decimal | None
+    band_position: Position | None
+
+    # Whether this record is the pay now in force. False for a change dated
+    # ahead, and also false for one back-dated behind an existing later
+    # record -- filed correctly, but not what the employee is paid today.
+    in_effect: bool
