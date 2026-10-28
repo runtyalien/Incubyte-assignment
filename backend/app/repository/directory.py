@@ -85,7 +85,7 @@ class Row:
     band_max_minor: int | None
 
 
-def _latest_pay_id(as_of: date):
+def latest_pay_id(as_of: date):
     """The id of the record in force for whichever employee row we are on.
 
     A correlated lookup rather than ranking every record in a subquery. Ranking
@@ -133,7 +133,10 @@ def _columns(pay) -> list:
     ]
 
 
-def _joined(statement: Select, pay, as_of: date, *, with_pay: bool = True) -> Select:
+def with_dimensions(statement: Select, pay, as_of: date, *, with_pay: bool = True) -> Select:
+    """Employees joined to their location, department, family, level, current
+    pay and band. Shared with the analytics queries, which group over the same
+    shape."""
     joined = (
         statement.select_from(Employee)
         .join(Location, Location.id == Employee.location_id)
@@ -145,7 +148,7 @@ def _joined(statement: Select, pay, as_of: date, *, with_pay: bool = True) -> Se
     if not with_pay:
         return joined
 
-    return joined.outerjoin(pay, pay.id == _latest_pay_id(as_of)).outerjoin(
+    return joined.outerjoin(pay, pay.id == latest_pay_id(as_of)).outerjoin(
         SalaryBand,
         and_(
             SalaryBand.location_id == Employee.location_id,
@@ -155,7 +158,7 @@ def _joined(statement: Select, pay, as_of: date, *, with_pay: bool = True) -> Se
     )
 
 
-def _conditions(filters: Filters, pay, as_of: date) -> list:
+def conditions_for(filters: Filters, pay, as_of: date) -> list:
     conditions = []
 
     if filters.search:
@@ -233,21 +236,20 @@ def search(
     page_size = min(page_size, MAX_PAGE_SIZE)
 
     pay = aliased(CompensationRecord, name="pay")
-    conditions = _conditions(filters, pay, as_of)
+    conditions = conditions_for(filters, pay, as_of)
 
     # Only the band filter looks at pay, and both joins are outer joins that
     # cannot change the row count, so the count query leaves them out unless
     # it needs them.
     counting_needs_pay = filters.position is not None
-    total = session.scalar(
-        _joined(select(func.count(Employee.id)), pay, as_of, with_pay=counting_needs_pay).where(
-            *conditions
-        )
+    counted = with_dimensions(
+        select(func.count(Employee.id)), pay, as_of, with_pay=counting_needs_pay
     )
+    total = session.scalar(counted.where(*conditions))
 
     rows = (
         session.execute(
-            _joined(select(*_columns(pay)), pay, as_of)
+            with_dimensions(select(*_columns(pay)), pay, as_of)
             .where(*conditions)
             .order_by(*_ordering(sort, descending, pay))
             .limit(page_size)
@@ -266,7 +268,7 @@ def get(session: Session, employee_id: int, as_of: date | None = None) -> Row | 
 
     row = (
         session.execute(
-            _joined(select(*_columns(pay)), pay, as_of).where(Employee.id == employee_id)
+            with_dimensions(select(*_columns(pay)), pay, as_of).where(Employee.id == employee_id)
         )
         .mappings()
         .one_or_none()

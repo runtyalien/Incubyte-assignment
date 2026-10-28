@@ -5,13 +5,14 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.api.filters import FilterDep
 from app.api.schemas import Band, EmployeeDetail, EmployeeSummary, Money, Page, PayEntry
 from app.db import get_session
 from app.domain.money import BASE_CURRENCY, to_major
 from app.models import CompensationRecord
 from app.repository import compensation as comp
 from app.repository import directory
-from app.repository.directory import MAX_PAGE_SIZE, Filters, Position, Row, Sort, Status
+from app.repository.directory import MAX_PAGE_SIZE, Position, Row, Sort
 
 router = APIRouter(tags=["employees"])
 
@@ -23,13 +24,7 @@ THREE_PLACES = Decimal("0.001")
 @router.get("/employees", response_model=Page[EmployeeSummary])
 def list_employees(
     session: SessionDep,
-    q: Annotated[str | None, Query(description="name, staff number or email")] = None,
-    country: Annotated[list[str], Query()] = [],  # noqa: B006 — FastAPI reads the default
-    department: Annotated[list[str], Query()] = [],  # noqa: B006
-    family: Annotated[list[str], Query()] = [],  # noqa: B006
-    level: Annotated[list[str], Query()] = [],  # noqa: B006
-    position: Position | None = None,
-    status: Status = Status.ACTIVE,
+    filters: FilterDep,
     sort: Sort = Sort.NAME,
     order: Literal["asc", "desc"] = "asc",
     page: Annotated[int, Query(ge=1)] = 1,
@@ -38,15 +33,7 @@ def list_employees(
 ) -> Page[EmployeeSummary]:
     total, rows = directory.search(
         session,
-        filters=Filters(
-            search=q,
-            countries=tuple(country),
-            departments=tuple(department),
-            families=tuple(family),
-            levels=tuple(level),
-            position=position,
-            status=status,
-        ),
+        filters=filters,
         page=page,
         page_size=page_size,
         sort=sort,
