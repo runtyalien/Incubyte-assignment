@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     app_name: str = "ACME Salary Management API"
     environment: str = "development"
 
+    database_url: str = "sqlite:///./salary.db"
+
     # Comma-separated, because env vars can't hold a list.
     cors_origins: str = "http://localhost:3000"
 
