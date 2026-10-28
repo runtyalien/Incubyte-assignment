@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --background: #fbfbfa;
+  --surface: #ffffff;
+  --foreground: #1a1a19;
+  --muted: #6b6b66;
+  --faint: #9a9a94;
+  --border: #e3e3df;
+  --accent: #1f4b3f;
+  --accent-soft: #e8efec;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Band position. Paired with text everywhere, never colour alone. */
+  --below: #a6590f;
+  --below-soft: #fbf0e3;
+  --above: #4a4199;
+  --above-soft: #eeedf8;
+  --within: #4a6b55;
+  --within-soft: #ecf1ee;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #141414;
+    --surface: #1c1c1b;
+    --foreground: #ededea;
+    --muted: #a0a09a;
+    --faint: #72726d;
+    --border: #2e2e2c;
+    --accent: #8fc5b0;
+    --accent-soft: #1e2b27;
+
+    --below: #e0a86a;
+    --below-soft: #2d2419;
+    --above: #a8a2e0;
+    --above-soft: #222033;
+    --within: #90b89f;
+    --within-soft: #1c2620;
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-below: var(--below);
+  --color-below-soft: var(--below-soft);
+  --color-above: var(--above);
+  --color-above-soft: var(--above-soft);
+  --color-within: var(--within);
+  --color-within-soft: var(--within-soft);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Money and counts line up column-wise only if the digits are the same width. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible focus for keyboard users without a ring on every mouse click. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
