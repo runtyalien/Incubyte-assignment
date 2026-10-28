@@ -80,6 +80,28 @@ If port 3000 or 8000 is already taken, pass another one — `npm run dev -- --po
 3001`, or `--port 8001` on uvicorn. The frontend finds the API through
 `NEXT_PUBLIC_API_URL`, so change that too if you move the backend.
 
+## Seed data
+
+The database starts empty. To fill it with a synthetic organisation of 10,000
+people across six countries, with roughly 50,000 compensation records covering
+ten years of hires, merit cycles and promotions:
+
+```powershell
+cd backend
+.venv\Scripts\python.exe -m alembic upgrade head
+.venv\Scripts\python.exe -m app.seed
+```
+
+Takes about two seconds. The same seed always produces the same organisation,
+so screenshots and demos stay reproducible. Pass `--employees 500` for a
+smaller set, `--seed N` for a different one, and `--reset` to replace data that
+is already there — without it, seeding a populated database is refused rather
+than doubling it.
+
+What the generated organisation looks like — headcount per country, the level
+pyramid, how markets are priced relative to the US, where salaries sit in band
+— is all in [`app/seed/shape.py`](backend/app/seed/shape.py).
+
 ## Tests
 
 PowerShell:
