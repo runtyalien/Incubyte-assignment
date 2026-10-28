@@ -140,3 +140,21 @@ class PayChangeResult(BaseModel):
     # ahead, and also false for one back-dated behind an existing later
     # record -- filed correctly, but not what the employee is paid today.
     in_effect: bool
+
+
+class CountryRef(BaseModel):
+    code: str
+    name: str
+    currency: str
+
+
+class LevelRef(BaseModel):
+    code: str
+    rank: int
+
+
+class Reference(BaseModel):
+    countries: list[CountryRef]
+    departments: list[str]
+    families: list[str]
+    levels: list[LevelRef]

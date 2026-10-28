@@ -125,3 +125,15 @@ def test_as_of_changes_the_answer(client, directory):
     earlier = fetch(client, "overview", as_of="2020-01-01")["headcount"]
 
     assert earlier < now
+
+
+def test_reference_lists_the_filter_values(client, directory):
+    body = client.get("/api/reference").json()
+
+    assert {c["code"] for c in body["countries"]} >= {"US", "IN"}
+    assert "Engineering" in body["departments"]
+    assert body["families"]
+    # Levels come back in seniority order so the UI does not have to sort them.
+    assert [level["rank"] for level in body["levels"]] == sorted(
+        level["rank"] for level in body["levels"]
+    )
