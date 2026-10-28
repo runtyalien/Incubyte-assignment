@@ -123,10 +123,21 @@ Next 16 refuses to prerender a route that reads `searchParams`, `params` or
 down to a component inside the boundary rather than awaiting it at the top.
 The shell renders immediately and the data streams in.
 
-**No component library.** The brief allows one. This is five screens of
-tables, forms and bars, and the generated-component folder a library brings
-would be more code than the application. A handful of local primitives in
-`components/ui.tsx` cover it.
+**shadcn/ui** supplies the controls — button, input, select, table, card,
+badge, label. It is copied into `components/ui/` rather than installed as a
+dependency, so the components are ours to edit and the version cannot drift
+underneath us. Its design tokens are the ones in `globals.css`; the band
+colours and a brand colour are added alongside them rather than bolted on.
+
+Application-level pieces sit in `components/shell.tsx` and are built from
+those: `Panel` wraps `Card` with a title bar, `BandTag` wraps `Badge` with the
+three band styles, `Pager` wraps `Button`. The domain parts the library has no
+opinion about — the band meter, the spread chart — stay hand-written.
+
+The library underneath is Base UI, not Radix, which matters in two places:
+`Select` renders the raw value unless the root is handed an `items` map, and
+`Button` has no `asChild`, so a link that should look like a button borrows
+`buttonVariants` instead of being wrapped in one.
 
 **No chart library either.** The two charts here are a quartile range with a
 median mark, and a band meter showing where one salary sits against its range.

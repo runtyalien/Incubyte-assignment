@@ -15,6 +15,8 @@ people.
   testing approach
 - [Performance](docs/PERFORMANCE.md) — measured directory timings and why the
   current-pay lookup is shaped the way it is
+- [Deployment](docs/DEPLOYMENT.md) — how it is hosted, and what the free tier
+  costs in behaviour
 - Decision records:
   - [Effective-dated compensation](docs/adr/0001-effective-dated-compensation.md)
   - [Money as integer minor units](docs/adr/0002-money-as-integer-minor-units.md)
@@ -26,7 +28,7 @@ people.
 | Layer    | Choice                                         |
 | -------- | ---------------------------------------------- |
 | Backend  | Python, FastAPI, Pydantic, pytest              |
-| Frontend | Next.js (App Router), TypeScript, Tailwind CSS |
+| Frontend | Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui |
 | Database | SQLite (not wired up yet)                      |
 
 ## Layout
@@ -95,6 +97,16 @@ backend.
 If port 3000 or 8000 is already taken, pass another one — `npm run dev -- --port
 3001`, or `--port 8001` on uvicorn. The frontend finds the API through
 `NEXT_PUBLIC_API_URL`, so change that too if you move the backend.
+
+## Everything at once, with Docker
+
+```bash
+docker compose up --build
+```
+
+UI on <http://localhost:3000>, API docs on <http://localhost:8000/docs>. The
+API container migrates and seeds itself on start-up, so there is nothing to run
+by hand. `docker compose down -v` throws the database away and starts over.
 
 ## Seed data
 
