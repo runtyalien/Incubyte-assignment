@@ -33,6 +33,7 @@ export function toQuery(params: Params): DirectoryQuery {
     level: many(params, "level"),
     position: one(params, "position"),
     status: one(params, "status"),
+    as_of: one(params, "as_of"),
   };
 }
 
