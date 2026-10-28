@@ -1,6 +1,7 @@
 """The seed is a fixture the rest of the product is built on, so these check
 the properties later phases rely on rather than just counting rows."""
 
+from collections import Counter
 from datetime import date
 
 import pytest
@@ -10,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.models import Base, CompensationRecord, Employee, FxRate, Location, SalaryBand
 from app.repository import compensation as comp
+from app.seed import shape
 from app.seed.run import DatabaseNotEmpty, seed_database
 
 TODAY = date(2026, 1, 15)
@@ -156,6 +158,37 @@ def test_pay_is_spread_wide_enough_to_produce_band_outliers(session):
     # would be noise rather than signal.
     assert below < len(employees) * 0.20
     assert above < len(employees) * 0.20
+
+
+def test_nobody_piles_up_on_the_edge_of_the_distribution(session):
+    # Clamping out-of-range draws to the bounds instead of redrawing puts
+    # everyone who overshot on an identical compa-ratio. It does not show in a
+    # list; it shows as a spike the moment the distribution is plotted.
+    seeded(session, headcount=1000)
+
+    employees = session.scalars(select(Employee)).all()
+    mids = {
+        (b.location_id, b.job_family_id, b.job_level_id): b.mid_minor
+        for b in session.scalars(select(SalaryBand)).all()
+    }
+    current = comp.current_many(session, [e.id for e in employees], as_of=TODAY)
+
+    ratios = Counter()
+    for employee in employees:
+        pay = current.get(employee.id)
+        if pay is None:
+            continue
+        mid = mids[(employee.location_id, employee.job_family_id, employee.job_level_id)]
+        ratios[round(pay.amount_minor / mid, 3)] += 1
+
+    assert ratios
+    at_the_floor = ratios[round(shape.COMPA_FLOOR, 3)]
+    at_the_ceiling = ratios[round(shape.COMPA_CEILING, 3)]
+
+    assert at_the_floor <= 1
+    assert at_the_ceiling <= 1
+    # No single value should dominate either: a spike anywhere is the same bug.
+    assert max(ratios.values()) < len(employees) * 0.02
 
 
 def _fingerprint(session) -> list[tuple]:

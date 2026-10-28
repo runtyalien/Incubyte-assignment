@@ -76,6 +76,9 @@ BAND_MAX_FACTOR = 1.20
 # genuine cases to show without any being planted.
 COMPA_MEAN = 0.98
 COMPA_SD = 0.11
+
+# Hard bounds. A draw outside them is thrown away and taken again rather than
+# pulled back to the edge, so nobody stacks up on the boundary.
 COMPA_FLOOR = 0.70
 COMPA_CEILING = 1.38
 

@@ -24,6 +24,11 @@ from app.seed.names import FIRST_NAMES, LAST_NAMES
 
 CHUNK = 5_000
 
+# Rejection sampling needs a way out if the bounds are ever tuned to something
+# the distribution cannot reach. At the current spread this gives up with a
+# probability too small to write down.
+MAX_DRAWS = 100
+
 
 @dataclass
 class Summary:
@@ -234,6 +239,26 @@ def _pay_events(rng: Random, hired_on: date, until: date) -> list[PayEvent]:
     return events
 
 
+def _compa_ratio(rng: Random) -> float:
+    """Where in their band someone sits, drawn again until it lands in range.
+
+    Clamping the tails to the bounds instead would stack everyone who overshot
+    onto the two edges — at this spread about one person in two hundred, all
+    reporting an identical compa-ratio. It is invisible in a list and obvious
+    the moment anyone plots a distribution.
+    """
+    for _ in range(MAX_DRAWS):
+        ratio = rng.gauss(shape.COMPA_MEAN, shape.COMPA_SD)
+        if shape.COMPA_FLOOR <= ratio <= shape.COMPA_CEILING:
+            return ratio
+
+    raise ValueError(
+        f"No compa-ratio inside [{shape.COMPA_FLOOR}, {shape.COMPA_CEILING}] after "
+        f"{MAX_DRAWS} draws from a distribution centred on {shape.COMPA_MEAN} "
+        f"with a spread of {shape.COMPA_SD}. Check the constants in shape.py."
+    )
+
+
 def _insert_people(
     session: Session,
     rng: Random,
@@ -304,11 +329,7 @@ def _insert_people(
         )
 
         band = bands[(location["id"], family["id"], level["id"])]
-        compa = min(
-            max(rng.gauss(shape.COMPA_MEAN, shape.COMPA_SD), shape.COMPA_FLOOR),
-            shape.COMPA_CEILING,
-        )
-        current = Decimal(band["mid_minor"]) * Decimal(str(compa))
+        current = Decimal(band["mid_minor"]) * Decimal(str(_compa_ratio(rng)))
 
         until = left_on - timedelta(days=1) if left_on else today
         events = _pay_events(rng, hired_on, until)
