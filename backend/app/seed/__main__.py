@@ -22,6 +22,16 @@ def main() -> None:
         help="random seed; the same value always produces the same organisation",
     )
     parser.add_argument("--reset", action="store_true", help="delete existing data before seeding")
+    parser.add_argument(
+        "--if-empty",
+        action="store_true",
+        dest="if_empty",
+        help=(
+            "do nothing, successfully, when the database already has people in it. "
+            "For container start-up, where seeding should fill a fresh disk but a "
+            "warm restart must not fail."
+        ),
+    )
     args = parser.parse_args()
 
     started = perf_counter()
@@ -34,6 +44,9 @@ def main() -> None:
                 reset=args.reset,
             )
         except DatabaseNotEmpty as err:
+            if args.if_empty:
+                print("Database already has employees; leaving it as it is.")
+                return
             raise SystemExit(str(err)) from None
 
     print(f"{summary} in {perf_counter() - started:.1f}s")

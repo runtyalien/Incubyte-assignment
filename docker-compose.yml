@@ -1,0 +1,36 @@
+# Both halves, seeded, in one command:
+#
+#     docker compose up --build
+#
+# The UI is then on http://localhost:3000 and the API docs on
+# http://localhost:8000/docs.
+
+services:
+  api:
+    build: ./backend
+    environment:
+      ENVIRONMENT: docker
+      DATABASE_URL: sqlite:////data/salary.db
+    volumes:
+      # Keeps the database between runs. Delete the volume to start over.
+      - api-data:/data
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Service name, not localhost: this is how the web container reaches
+        # the API container, and it is baked into the rewrite at build time.
+        API_URL: http://api:8000
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  api-data:

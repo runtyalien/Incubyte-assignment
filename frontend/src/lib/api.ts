@@ -9,8 +9,21 @@ import type {
   Reference,
 } from "./types";
 
+/** Where the API is, which differs by who is asking.
+ *
+ *  On the server there is no proxy in the way, so it calls the backend
+ *  directly — in production that is an internal address the browser could not
+ *  reach anyway. In the browser it calls this app's own origin and
+ *  next.config.ts rewrites /api through to the backend, which means one
+ *  origin, no CORS, and no backend URL baked into the bundle.
+ */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  typeof window === "undefined"
+    ? (process.env.API_URL ?? "http://localhost:8000")
+    : "";
+
+/** For error messages, where "" would read as if the address were missing. */
+const WHERE = API_BASE_URL || "this site";
 
 export class ApiError extends Error {
   constructor(
@@ -37,7 +50,7 @@ export async function apiFetch<T>(
       cache: "no-store",
     });
   } catch {
-    throw new ApiError(`Could not reach the API at ${API_BASE_URL}`);
+    throw new ApiError(`Could not reach the API at ${WHERE}`);
   }
 
   if (!res.ok) {
@@ -95,6 +108,7 @@ export type DirectoryQuery = {
   order?: string;
   page?: number;
   page_size?: number;
+  as_of?: string;
 };
 
 export function listEmployees(params: DirectoryQuery) {
@@ -105,8 +119,8 @@ export function getReference() {
   return apiFetch<Reference>("/api/reference");
 }
 
-export function getEmployee(id: number) {
-  return apiFetch<EmployeeDetail>(`/api/employees/${id}`);
+export function getEmployee(id: number, asOf?: string) {
+  return apiFetch<EmployeeDetail>(`/api/employees/${id}${query({ as_of:asOf})}`);
 }
 
 export function getOverview(params: DirectoryQuery = {}) {
