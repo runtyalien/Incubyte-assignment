@@ -8,6 +8,8 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    "sqlalchemy>=2.0",
+    "alembic>=1.14",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +33,10 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+# Alembic writes these. Reformatting generated output means a lint diff every
+# time a migration is created, which teaches people to ignore the linter.
+extend-exclude = ["migrations/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
