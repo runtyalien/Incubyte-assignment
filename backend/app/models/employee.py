@@ -1,7 +1,7 @@
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, ForeignKey, Index, String
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, CreatedAt
@@ -41,6 +41,10 @@ class Employee(Base, CreatedAt):
     )
 
     __table_args__ = (
+        CheckConstraint(
+            "left_on IS NULL OR left_on >= hired_on",
+            name="ck_employee_left_on_after_hired_on",
+        ),
         # The directory filters on these constantly and sorts by name.
         Index("ix_employees_location", "location_id"),
         Index("ix_employees_department", "department_id"),

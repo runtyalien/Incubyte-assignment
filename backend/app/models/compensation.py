@@ -1,7 +1,7 @@
 from datetime import date
 from enum import StrEnum
 
-from sqlalchemy import Date, Enum, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, Enum, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, CreatedAt
@@ -45,6 +45,9 @@ class CompensationRecord(Base, CreatedAt):
     employee: Mapped[Employee] = relationship(back_populates="compensation")
 
     __table_args__ = (
+        CheckConstraint("amount_minor > 0", name="ck_compensation_amount_positive"),
+        CheckConstraint("base_amount_minor > 0", name="ck_compensation_base_amount_positive"),
+        CheckConstraint("fx_rate_micros > 0", name="ck_compensation_fx_rate_positive"),
         # Every current-salary lookup walks this, descending.
         Index("ix_comp_employee_effective", "employee_id", "effective_from"),
     )
@@ -71,6 +74,8 @@ class SalaryBand(Base):
     job_level: Mapped[JobLevel] = relationship(lazy="joined")
 
     __table_args__ = (
+        CheckConstraint("min_minor > 0 AND min_minor <= mid_minor AND mid_minor <= max_minor",
+        name="ck_salary_band_ordered_positive"),
         UniqueConstraint(
             "location_id", "job_family_id", "job_level_id", name="uq_band_location_family_level"
         ),
