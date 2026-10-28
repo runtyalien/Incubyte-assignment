@@ -38,5 +38,5 @@ class JobLevel(Base):
     code: Mapped[str] = mapped_column(String(8), unique=True)
 
     # Seniority as a number, because "L10" sorts before "L2" as a string and
-    # the pay-gap analysis needs to compare like with like.
+    # banding needs to compare like with like.
     rank: Mapped[int] = mapped_column(unique=True)

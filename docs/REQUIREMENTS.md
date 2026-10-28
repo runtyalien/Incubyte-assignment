@@ -55,10 +55,10 @@ whether someone is paid appropriately for their role and location, which is
 the question an HR manager actually has.
 
 **Analytics.** Distribution of pay (median, quartiles) sliced by country,
-department, family and level; who sits outside their band in either direction;
-and pay gap by gender across departments, reported both raw and controlled for
-level. Reporting only the raw gap invites the wrong conclusion, and reporting
-only the adjusted one hides a real problem, so both are shown together.
+department, family and level, and who sits outside their band in either
+direction. Compa-ratio is the headline number: a salary set against its band
+midpoint, which turns "is this person paid a lot" into "is this person paid
+appropriately for their role and location".
 
 ## Deliberately out of scope
 
@@ -84,6 +84,12 @@ because it is unimportant, and the architecture keeps it addable.
 reality, and valuable in a real rollout. It is mostly file parsing and
 validation plumbing, so it loses to features that show more.
 
+**Demographic pay-gap analysis.** Valuable to a real HR manager and a natural
+extension of banding, but it needs demographic data nothing else in the product
+uses, and against synthetic employees any gap reported would be an artefact of
+the seed rather than a finding. Compa-ratio answers the fairness question this
+dataset can answer honestly.
+
 **Live FX feeds.** Rates are seeded and snapshotted. Wiring a provider is an
 integration detail, not a design question.
 
@@ -102,11 +108,6 @@ ACME is fictional, so the shape is invented but kept realistic:
 - Three years of history, including hires, annual merit cycles, promotions and
   some departures, so the analytics have something real to show.
 
-Gender is stored because pay-gap analysis is one of the more valuable things
-this software can do for an HR manager. It is sensitive personal data under
-GDPR Article 9, so it is kept optional, excluded from the directory and from
-search, and used only in aggregate reporting.
-
 ## What success looks like
 
 - The directory stays responsive at 10,000 employees, with filtering and sorting
@@ -114,7 +115,7 @@ search, and used only in aggregate reporting.
 - Every compensation change carries an effective date and a reason, and no
   historical record is ever altered.
 - The HR manager can answer "what is our median pay for this role in this
-  country", "who is outside their band" and "what is the gap between departments"
+  country", "who is outside their band" and "how do two departments compare"
   in under a minute each, without exporting anything.
 - The temporal and analytical logic is covered by tests against hand-checked
   numbers, because a wrong salary figure does not crash anything — it just

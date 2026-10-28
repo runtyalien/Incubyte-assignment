@@ -1,6 +1,6 @@
 from app.models.base import Base
 from app.models.compensation import CompensationRecord, PayChangeReason, SalaryBand
-from app.models.employee import Employee, Gender
+from app.models.employee import Employee
 from app.models.fx import FxRate
 from app.models.org import Department, JobFamily, JobLevel, Location
 
@@ -11,7 +11,6 @@ __all__ = [
     "Department",
     "Employee",
     "FxRate",
-    "Gender",
     "JobFamily",
     "JobLevel",
     "Location",
