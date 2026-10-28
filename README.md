@@ -4,8 +4,8 @@ Web software that lets an HR manager maintain salary data for ~10,000 employees
 across multiple countries, and answer questions about how the organisation pays
 people.
 
-> **Status: in progress.** The backend is complete — model, seed, directory,
-> analytics and recording pay changes. The UI is not built yet.
+> **Status: in progress.** Backend and UI are both working end to end.
+> Deployment and the demo are still to do.
 
 ## Documents
 
@@ -32,14 +32,28 @@ people.
 ## Layout
 
 ```
-backend/    FastAPI service
-  app/      application code
-  tests/    pytest suite
-frontend/   Next.js app
-  src/app/  routes
-  src/lib/  API client
-docs/       requirements, architecture, decision records
+backend/        FastAPI service
+  app/          application code
+  scripts/      benchmarks
+  tests/        pytest suite
+frontend/
+  src/app/      routes
+  src/components/  UI
+  src/lib/      API client, formatting, URL state
+docs/           requirements, architecture, decision records
 ```
+
+## Screens
+
+| Route             | What it does                                            |
+| ----------------- | ------------------------------------------------------- |
+| `/`               | How the organisation pays: spread by country and level, who sits outside band |
+| `/employees`      | The directory — search, filter, sort, page through 10,000 |
+| `/employees/{id}` | One person: pay history, position in band, record a change |
+
+Filters live in the URL, so any view can be shared or bookmarked and the back
+button behaves. The overview and the directory take the same filters, and
+either links across to the other with them intact.
 
 ## Running locally
 

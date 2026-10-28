@@ -110,6 +110,32 @@ Tests concentrate where mistakes are invisible rather than spreading evenly:
 Everything runs against SQLite in memory, so the suite stays fast and
 deterministic with no fixture teardown to get wrong.
 
+## Frontend
+
+Server components do the fetching. Filter state lives in the URL rather than
+in React, which makes a filtered view shareable, makes the back button work,
+and leaves no client-side store to keep in sync with the server. The only
+client components are the ones that genuinely need to be: the filter bar, the
+pay-change form, and the nav's active-link highlight.
+
+Next 16 refuses to prerender a route that reads `searchParams`, `params` or
+`usePathname()` outside a Suspense boundary, so each page passes the promise
+down to a component inside the boundary rather than awaiting it at the top.
+The shell renders immediately and the data streams in.
+
+**No component library.** The brief allows one. This is five screens of
+tables, forms and bars, and the generated-component folder a library brings
+would be more code than the application. A handful of local primitives in
+`components/ui.tsx` cover it.
+
+**No chart library either.** The two charts here are a quartile range with a
+median mark, and a band meter showing where one salary sits against its range.
+Both are a few divs with percentage widths, and both say something a generic
+bar chart would not: a bar chart of medians throws away the spread, which is
+the thing that distinguishes two departments paying the same median very
+differently. The charts share one scale across groups, since bars on different
+scales are not comparable.
+
 ## Chosen to be simple
 
 SQLite, because at this size it is sufficient and it makes the project trivial
