@@ -12,6 +12,7 @@ from app.models import (
     JobLevel,
     Location,
     PayChangeReason,
+    SalaryBand,
 )
 
 _serial = count(1)
@@ -76,3 +77,41 @@ def add_pay(
     session.add(record)
     session.flush()
     return record
+
+
+def add_location(session: Session, code: str, name: str, currency: str) -> Location:
+    location = Location(country_code=code, name=name, currency=currency)
+    session.add(location)
+    session.flush()
+    return location
+
+
+def add_band(
+    session: Session,
+    org: Org,
+    *,
+    low: str,
+    mid: str,
+    high: str,
+    location: Location | None = None,
+    currency: str = "USD",
+) -> SalaryBand:
+    band = SalaryBand(
+        location_id=(location or org.location).id,
+        job_family_id=org.family.id,
+        job_level_id=org.level.id,
+        currency=currency,
+        min_minor=to_minor(low, currency),
+        mid_minor=to_minor(mid, currency),
+        max_minor=to_minor(high, currency),
+    )
+    session.add(band)
+    session.flush()
+    return band
+
+
+def paid(session: Session, org: Org, amount: str, *, on: date = date(2021, 1, 4), **overrides):
+    """An employee on a known salary, which is all most analytics tests need."""
+    employee = add_employee(session, org, **overrides)
+    add_pay(session, employee, on, amount, reason=PayChangeReason.HIRE)
+    return employee
