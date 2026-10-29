@@ -5,6 +5,7 @@ import pytest
 from app.domain.money import (
     UnknownCurrency,
     exponent,
+    has_valid_precision,
     rate_to_micros,
     to_base,
     to_major,
@@ -50,3 +51,33 @@ def test_conversion_between_different_exponents():
 def test_unknown_currency_is_rejected_rather_than_guessed():
     with pytest.raises(UnknownCurrency):
         to_minor("100", "XYZ")
+
+
+def test_an_amount_that_fits_the_minor_unit_is_exact():
+    assert has_valid_precision("1234.56", "USD")
+
+
+def test_a_third_decimal_does_not_fit_a_cent():
+    # to_minor would answer 123457 here, which is a different salary.
+    assert not has_valid_precision("1234.567", "USD")
+
+
+def test_trailing_zeros_are_not_extra_precision():
+    assert has_valid_precision("1234.5600", "USD")
+
+
+def test_a_whole_number_always_fits():
+    assert has_valid_precision("1234", "USD")
+
+
+def test_yen_has_nowhere_to_put_a_fraction():
+    # Two decimals are fine in USD and meaningless in JPY, which is the whole
+    # reason this is a per-currency question rather than a fixed two places.
+    assert has_valid_precision("1234.50", "USD")
+    assert not has_valid_precision("1234.50", "JPY")
+    assert has_valid_precision("1234", "JPY")
+
+
+def test_a_half_minor_unit_is_rejected_rather_than_rounded():
+    # Exactly the midpoint, where ROUND_HALF_UP is at its most confident.
+    assert not has_valid_precision("0.005", "USD")

@@ -206,3 +206,26 @@ def _rate(session, currency, effective_from, micros):
 
     session.add(FxRate(currency=currency, effective_from=effective_from, rate_micros=micros))
     session.flush()
+
+
+def test_a_fraction_of_a_yen_is_rejected(session, org):
+    # JPY has no minor unit, so half a yen is not a rounding question: there is
+    # nowhere to put it, and to_minor would make it a whole yen without saying.
+    tokyo = add_location(session, "JP", "Japan", "JPY")
+    person = add_employee(session, org, hired_on=HIRED, location_id=tokyo.id)
+
+    with pytest.raises(InvalidPayChange, match="too many decimal places"):
+        give_raise(session, person, "8000000.5")
+
+
+def test_a_whole_number_of_yen_is_recorded_as_given(session, org):
+    tokyo = add_location(session, "JP", "Japan", "JPY")
+    person = add_employee(session, org, hired_on=HIRED, location_id=tokyo.id)
+    _rate(session, "JPY", date(2021, 1, 1), 6_700)
+
+    record = give_raise(session, person, "8000000")
+
+    # Yen, not sen -- a two-decimal assumption would store this 100x too large.
+    assert record.amount_minor == 8_000_000
+    # 8,000,000 yen at 0.0067 is 53,600 dollars, which does have cents.
+    assert record.base_amount_minor == 5_360_000
