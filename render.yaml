@@ -18,6 +18,12 @@ services:
       - key: DATABASE_URL
         value: sqlite:////data/salary.db
 
+      # Render generates this on first deploy. Copy the value into the
+      # frontend's API_KEY on Vercel -- the two have to match, and the
+      # service refuses to start in production without it.
+      - key: API_KEY
+        generateValue: true
+
       # The browser reaches the API through the frontend's own origin, so the
       # API never needs to answer a cross-origin request. Left empty on
       # purpose: anything listed here would be a permission nobody uses.

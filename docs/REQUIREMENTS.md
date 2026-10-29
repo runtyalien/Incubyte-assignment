@@ -74,8 +74,12 @@ would double the domain for a marginal gain in insight.
 policy. Building a generic state machine would add significant complexity
 without demonstrating anything the rest of the system does not.
 
-**Real authentication and access control.** The app assumes a single trusted HR
-manager and stubs the session. This is the largest gap between this and
+**Real authentication and access control.** The deployment is behind a shared
+demo credential and the API behind a shared key, so salaries are not on the
+open internet; see [ADR 0005](adr/0005-demo-access-control.md). That is a
+door, not access control. There are still no users, so the system cannot say
+who made a change; no roles, so anyone through the door can do anything the
+app can do; and no audit log. This remains the largest gap between this and
 something deployable: salary data genuinely needs SSO, role-based access,
 field-level permissions and an access audit log. It is omitted for time, not
 because it is unimportant, and the architecture keeps it addable.

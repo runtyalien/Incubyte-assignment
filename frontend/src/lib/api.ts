@@ -12,15 +12,22 @@ import type {
 /** Where the API is, which differs by who is asking.
  *
  *  On the server there is no proxy in the way, so it calls the backend
- *  directly — in production that is an internal address the browser could not
- *  reach anyway. In the browser it calls this app's own origin and
- *  next.config.ts rewrites /api through to the backend, which means one
- *  origin, no CORS, and no backend URL baked into the bundle.
+ *  directly — in production that is an address the browser could not reach
+ *  anyway. In the browser it calls this app's own origin, and the route
+ *  handler at /api/[...path] forwards it on: one origin, no CORS, and no
+ *  backend URL baked into the bundle.
  */
 export const API_BASE_URL =
   typeof window === "undefined"
     ? (process.env.API_URL ?? "http://localhost:8000")
     : "";
+
+/** Server-side only. A variable without the NEXT_PUBLIC_ prefix never reaches
+ *  the browser bundle; the window check says so out loud rather than leaving
+ *  it to a reader's knowledge of Next's build. In the browser the key is not
+ *  needed, because the request goes through the proxy, which attaches it. */
+const API_KEY =
+  typeof window === "undefined" ? (process.env.API_KEY ?? "") : "";
 
 /** For error messages, where "" would read as if the address were missing. */
 const WHERE = API_BASE_URL || "this site";
@@ -46,7 +53,11 @@ export async function apiFetch<T>(
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers: {
+        "Content-Type": "application/json",
+        ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
+        ...init?.headers,
+      },
       cache: "no-store",
     });
   } catch {

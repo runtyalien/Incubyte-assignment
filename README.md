@@ -4,8 +4,26 @@ Web software that lets an HR manager maintain salary data for ~10,000 employees
 across multiple countries, and answer questions about how the organisation pays
 people.
 
-> **Status: in progress.** Backend and UI are both working end to end.
-> Deployment and the demo are still to do.
+> **Status: deployed.** Backend and UI work end to end and are hosted. The
+> demo video is still to do.
+
+## Live
+
+- **App** — <https://incubyte-assignment-two.vercel.app>
+- **API** — <https://salary-api-8hvr.onrender.com/docs>
+
+Both are behind a demo credential, which is shared separately and is not
+in this repository. The app prompts for it; the API wants an `X-API-Key`
+header. [Demo access](#demo-access) explains why, and
+[ADR 0005](docs/adr/0005-demo-access-control.md) what it gives up.
+
+Both sit on free tiers, which shows. The API sleeps after about 15 minutes
+idle, so the first request after a quiet spell waits roughly 50 seconds while
+the container wakes — the UI holds its loading state rather than erroring, and
+the next load is quick. That restart also wipes the database and reseeds it,
+which is why headcount shifts by a few people between visits and why a pay
+change recorded through the UI does not outlive the instance.
+[Deployment](docs/DEPLOYMENT.md) has the numbers and the reasoning.
 
 ## Documents
 
@@ -22,6 +40,7 @@ people.
   - [Money as integer minor units](docs/adr/0002-money-as-integer-minor-units.md)
   - [Snapshotted FX rates](docs/adr/0003-snapshot-fx-rates.md)
   - [SQLite as the datastore](docs/adr/0004-sqlite-as-datastore.md)
+  - [Demo access control](docs/adr/0005-demo-access-control.md)
 
 ## Stack
 
@@ -29,7 +48,7 @@ people.
 | -------- | ---------------------------------------------- |
 | Backend  | Python, FastAPI, Pydantic, pytest              |
 | Frontend | Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui |
-| Database | SQLite (not wired up yet)                      |
+| Database | SQLite, SQLAlchemy 2.0, Alembic                |
 
 ## Layout
 
@@ -96,7 +115,40 @@ backend.
 
 If port 3000 or 8000 is already taken, pass another one — `npm run dev -- --port
 3001`, or `--port 8001` on uvicorn. The frontend finds the API through
-`NEXT_PUBLIC_API_URL`, so change that too if you move the backend.
+`API_URL`, so change that too if you move the backend.
+
+## Demo access
+
+Nothing is required locally. Both halves read their secrets from the
+environment, and both treat absence as "this is a development machine":
+the API serves anyone, and the app prompts for nothing.
+
+Deployed, two things change. Every page sits behind an HTTP Basic prompt,
+and every salary route on the API wants an `X-API-Key` header that only the
+frontend's server has. Copy `backend/.env.example` and
+`frontend/.env.example` and fill in:
+
+| Variable | Where | What it does |
+| --- | --- | --- |
+| `API_KEY` | both | Shared secret on every salary route. The two must match. |
+| `DEMO_USER` | frontend | Basic auth username. Defaults to `hr`. |
+| `DEMO_PASSWORD` | frontend | Basic auth password. Empty means no gate. |
+| `CORS_ORIGINS` | backend | Allowed cross-origin callers. Empty in production. |
+
+Generate a key with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+With `ENVIRONMENT=production` the API refuses to start without `API_KEY`,
+rather than coming up healthy and serving ten thousand salaries to whoever
+asks. `/api/health` stays open on both sides so monitoring still works.
+
+This is a door, not access control — one shared credential, no users, no
+roles, no audit trail.
+[ADR 0005](docs/adr/0005-demo-access-control.md) sets out what that buys
+and what it costs.
 
 ## Everything at once, with Docker
 
@@ -120,11 +172,12 @@ cd backend
 .venv\Scripts\python.exe -m app.seed
 ```
 
-Takes about two seconds. The same seed always produces the same organisation,
-so screenshots and demos stay reproducible. Pass `--employees 500` for a
-smaller set, `--seed N` for a different one, and `--reset` to replace data that
-is already there — without it, seeding a populated database is refused rather
-than doubling it.
+Takes about two seconds. The same seed value always produces the same people —
+same names, same countries, same level mix — but dates are generated relative to
+the day you run it, so tenures shift and a slightly different number of them
+have left. Pass `--employees 500` for a smaller set, `--seed N` for a different
+one, and `--reset` to replace data that is already there — without it, seeding a
+populated database is refused rather than doubling it.
 
 What the generated organisation looks like — headcount per country, the level
 pyramid, how markets are priced relative to the US, where salaries sit in band
@@ -133,7 +186,7 @@ pyramid, how markets are priced relative to the US, where salaries sit in band
 ## API
 
 With the backend running, the interactive docs at <http://localhost:8000/docs>
-list everything. The two endpoints that exist so far:
+list everything. The ones that carry the product:
 
 ```
 GET  /api/employees                      paged, filtered, sorted directory
