@@ -62,17 +62,36 @@ means no CSRF surface, so there is no token machinery here either.
 **Credentials travel on every request.** Both hosts are HTTPS-only, so this
 is encrypted in transit. Over plain HTTP it would be indefensible.
 
-**Failed-key throttling is per process.** `FailedAttempts` keeps recent
-failures per client address in memory: ten inside a minute and that caller
-gets 429s. Against this deployment — one instance — that makes guessing the
-key pointless. It is not a distributed rate limiter. A second instance would
-count separately, and a restart forgets everything. Doing better needs shared
-state, and that is infrastructure the rest of the system does not need.
+**Failed-key throttling is per process, and only as good as the address it
+counts.** `FailedAttempts` keeps recent failures per caller in memory: ten
+inside a minute and that caller gets 429s.
+
+The caller comes from `X-Forwarded-For`, not from the connection's peer. The
+first version used the peer, which behind Render's router is the proxy rather
+than the client — and that address varies between requests, so attempts
+scattered across separate counters and the limit never bit. Twelve wrong keys
+against the deployed API got twelve 401s and no throttling whatsoever. Every
+test passed throughout, because a test client always connects from the same
+place; only running it against the real deployment showed it. Trusting the
+header is defensible only because the container is unreachable except through
+that proxy.
+
+It is still not a distributed rate limiter. A second instance would count
+separately, and a restart forgets everything. Doing better needs shared state,
+and that is infrastructure the rest of the system does not need.
 
 **The Basic auth gate is not rate limited at all.** It runs on Vercel's edge
 across instances that share no memory, so the same in-process trick would be
 a comfort rather than a control. Doing it properly needs a KV store. The
 mitigation is a long generated password rather than a guessable one.
+
+**The API's own documentation is open.** `/docs`, `/redoc` and
+`/openapi.json` take no key. They describe the shape of the API and return
+nobody's pay, and Swagger's "try it out" is refused like any other caller
+without a key. The README points at `/docs` on purpose: an API whose
+documentation sits behind the credential is harder to evaluate and no safer,
+since the schema is inferable from the client regardless. Serving real data,
+it would go behind the key with everything else.
 
 **CORS is configured but unused.** The browser only ever talks to the
 frontend's origin, so no cross-origin request should ever reach the API, and

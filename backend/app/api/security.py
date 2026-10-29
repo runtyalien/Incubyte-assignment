@@ -81,7 +81,7 @@ def require_api_key(
     if not expected:
         return
 
-    client = request.client.host if request.client else "unknown"
+    client = _caller(request)
     now = time.monotonic()
 
     if failures.blocked(client, now):
@@ -98,6 +98,25 @@ def require_api_key(
             detail=f"A valid {API_KEY_HEADER} header is required.",
             headers={"WWW-Authenticate": API_KEY_HEADER},
         )
+
+
+def _caller(request: Request) -> str:
+    """Who to count this against.
+
+    Behind a proxy the peer address is the proxy's, not the caller's, and on
+    Render it varies between requests -- which scattered attempts across
+    separate counters and meant the limit never bit. X-Forwarded-For is the
+    caller as the proxy saw them.
+
+    Trusting that header is only defensible because the container is not
+    reachable except through the proxy. Exposed directly, a caller could set
+    it per request and never be counted twice.
+    """
+    first_hop = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if first_hop:
+        return first_hop
+
+    return request.client.host if request.client else "unknown"
 
 
 def _matches(offered: str, expected: str) -> bool:

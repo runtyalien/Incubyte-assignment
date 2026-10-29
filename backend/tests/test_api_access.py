@@ -85,9 +85,7 @@ def test_health_stays_open(client, guarded):
     assert res.json()["status"] == "ok"
 
 
-def test_an_anonymous_pay_change_is_refused_and_writes_nothing(
-    client, guarded, session, person
-):
+def test_an_anonymous_pay_change_is_refused_and_writes_nothing(client, guarded, session, person):
     before = len(comp.history(session, person.id))
 
     res = client.post(
@@ -131,3 +129,59 @@ def test_without_a_key_configured_the_api_is_open(client, person):
     assert get_settings().api_key == ""
 
     assert client.get("/api/employees").status_code == 200
+
+
+def wrong(client, forwarded=None):
+    headers = {"X-API-Key": WRONG}
+    if forwarded:
+        headers["X-Forwarded-For"] = forwarded
+    return client.get("/api/employees", headers=headers)
+
+
+def test_a_caller_is_blocked_after_enough_wrong_keys(client, guarded):
+    for _ in range(MAX_FAILURES):
+        assert wrong(client, "203.0.113.5").status_code == 401
+
+    assert wrong(client, "203.0.113.5").status_code == 429
+
+
+def test_two_callers_attempts_do_not_combine(client, guarded):
+    """The bug this exists for.
+
+    Behind a proxy every request arrives from the proxy's address, so counting
+    that address pools unrelated callers together. On Render the address also
+    varied between requests, which scattered one caller across several
+    counters and meant the limit never bit at all. Half the budget each must
+    leave both of them free.
+    """
+    for _ in range(MAX_FAILURES // 2):
+        wrong(client, "203.0.113.5")
+        wrong(client, "198.51.100.7")
+
+    assert wrong(client, "203.0.113.5").status_code == 401
+    assert wrong(client, "198.51.100.7").status_code == 401
+
+
+def test_one_caller_cannot_lock_out_another_behind_the_same_proxy(client, guarded):
+    for _ in range(MAX_FAILURES):
+        wrong(client, "203.0.113.5")
+
+    assert wrong(client, "198.51.100.7").status_code == 401
+
+
+def test_the_first_hop_identifies_the_caller_not_the_last(client, guarded):
+    # A chained header lists the original caller first and the proxies after,
+    # so reading the wrong end pools everyone behind one proxy again.
+    for _ in range(MAX_FAILURES // 2):
+        wrong(client, "203.0.113.5, 10.0.0.1")
+        wrong(client, "198.51.100.7, 10.0.0.1")
+
+    assert wrong(client, "203.0.113.5, 10.0.0.1").status_code == 401
+
+
+def test_an_empty_forwarded_header_falls_back_to_the_peer(client, guarded):
+    # Not a proxy at all, so there is nothing better to count than the peer.
+    for _ in range(MAX_FAILURES):
+        assert wrong(client, "   ").status_code == 401
+
+    assert wrong(client).status_code == 429
